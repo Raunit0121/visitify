@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gate Ease - Visitor Check-in</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <h1>🏢 Gate Ease</h1>
+                <p>Visitor Check-in System</p>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Welcome Screen -->
+            <div id="welcome-screen" class="screen active">
+                <div class="welcome-card">
+                    <div class="icon">
+                        <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 12l2 2 4-4"/>
+                            <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3"/>
+                            <path d="M3 12c1 0 3-1 3-3s-2-3-3-3-3 1-3 3 2 3 3 3"/>
+                            <path d="M3 12h6m6 0h6"/>
+                        </svg>
+                    </div>
+                    <h2>Welcome to Gate Ease</h2>
+                    <p>Scan your QR invitation to check in</p>
+                    
+                    <div class="instructions">
+                        <div class="step">
+                            <span class="step-number">1</span>
+                            <span>Get QR code from your host</span>
+                        </div>
+                        <div class="step">
+                            <span class="step-number">2</span>
+                            <span>Click "Scan QR Code" below</span>
+                        </div>
+                        <div class="step">
+                            <span class="step-number">3</span>
+                            <span>Complete your registration</span>
+                        </div>
+                    </div>
+
+                    <button id="start-scan-btn" class="primary-btn">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 9h6v6h-6z"/>
+                            <path d="M9 1v6h6V1"/>
+                            <path d="M1 9v6h6V9"/>
+                            <path d="M17 17h6v6h-6z"/>
+                        </svg>
+                        Scan QR Code
+                    </button>
+                </div>
+            </div>
+
+            <!-- QR Scanner Screen -->
+            <div id="scanner-screen" class="screen">
+                <div class="scanner-container">
+                    <div class="scanner-header">
+                        <button id="back-to-welcome" class="back-btn">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M19 12H5"/>
+                                <path d="M12 19l-7-7 7-7"/>
+                            </svg>
+                            Back
+                        </button>
+                        <h3>Scan QR Code</h3>
+                    </div>
+                    
+                    <div id="qr-reader" class="qr-reader"></div>
+                    
+                    <div class="scanner-instructions">
+                        <p>Position the QR code within the camera frame</p>
+                        <div class="loading" id="scanner-loading" style="display: none;">
+                            <div class="spinner"></div>
+                            <p>Processing QR code...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Registration Form Screen -->
+            <div id="registration-screen" class="screen">
+                <div class="form-container">
+                    <div class="form-header">
+                        <h3>Visitor Registration</h3>
+                        <div class="invitation-info" id="invitation-info">
+                            <!-- Invitation details will be populated here -->
+                        </div>
+                    </div>
+
+                    <form id="registration-form" class="registration-form">
+                        <div class="form-group">
+                            <label for="visitor-name">Full Name *</label>
+                            <input type="text" id="visitor-name" name="name" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="visitor-phone">Phone Number *</label>
+                            <input type="tel" id="visitor-phone" name="phone" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="visitor-email">Email (Optional)</label>
+                            <input type="email" id="visitor-email" name="email">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="visitor-company">Company/Organization (Optional)</label>
+                            <input type="text" id="visitor-company" name="company">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="visitor-photo">Photo (Optional)</label>
+                            <input type="file" id="visitor-photo" name="photo" accept="image/*" capture="user">
+                            <div class="photo-preview" id="photo-preview" style="display: none;">
+                                <img id="preview-image" src="" alt="Preview">
+                                <button type="button" id="remove-photo" class="remove-photo-btn">Remove</button>
+                            </div>
+                        </div>
+
+                        <button type="submit" id="submit-registration" class="primary-btn">
+                            <span class="btn-text">Complete Registration</span>
+                            <div class="btn-loading" style="display: none;">
+                                <div class="spinner"></div>
+                            </div>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Success Screen -->
+            <div id="success-screen" class="screen">
+                <div class="success-card">
+                    <div class="success-icon">
+                        <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                            <polyline points="22,4 12,14.01 9,11.01"/>
+                        </svg>
+                    </div>
+                    <h2>Registration Successful!</h2>
+                    <p>Your visit has been registered successfully.</p>
+                    <div class="success-details" id="success-details">
+                        <!-- Success details will be populated here -->
+                    </div>
+                    <div class="success-actions">
+                        <button id="new-registration" class="primary-btn">Register Another Visitor</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Screen -->
+            <div id="error-screen" class="screen">
+                <div class="error-card">
+                    <div class="error-icon">
+                        <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="15" y1="9" x2="9" y2="15"/>
+                            <line x1="9" y1="9" x2="15" y2="15"/>
+                        </svg>
+                    </div>
+                    <h2>Registration Failed</h2>
+                    <p id="error-message">Something went wrong. Please try again.</p>
+                    <div class="error-actions">
+                        <button id="retry-registration" class="primary-btn">Try Again</button>
+                        <button id="back-to-start" class="secondary-btn">Start Over</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>&copy; 2024 Gate Ease. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="notification-toast" class="toast">
+        <div class="toast-content">
+            <span id="toast-message"></span>
+            <button id="toast-close" class="toast-close">&times;</button>
+        </div>
+    </div>
+
+    <script src="firebase-config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
