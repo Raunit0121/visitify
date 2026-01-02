@@ -210,35 +210,32 @@ class VisitorCheckInApp {
                 throw new Error('Please enter visitor name');
             }
 
-            // Use the QR invitation first
-            const invitationUsed = await this.useInvitation(this.currentInvitation.id);
-            if (!invitationUsed) {
-                throw new Error('Failed to validate invitation');
-            }
-
-            // Create visitor record with same structure as guard scanner
+            // Generate visitor ID using same UUID format as Flutter app
             const visitorId = this.generateUUID();
+            
+            // Create visitor record with EXACT same structure as guard scanner
             const visitorData = {
-                id: visitorId,
                 name: name,
                 visiting_flat: this.currentInvitation.flat_no,
                 phone: phone || '',
                 photo_url: this.currentInvitation.image_url || null,
                 status: 'checked_in', // Auto check-in like guard scanner
                 entry_time: firebase.firestore.Timestamp.now(),
-                check_in_time: firebase.firestore.Timestamp.now(),
+                exit_time: null,
                 purpose: this.currentInvitation.purpose,
                 qr_code: this.currentInvitation.id,
                 host_id: this.currentInvitation.host_id,
                 host_name: this.currentInvitation.host_name,
+                vehicle_type: null,
                 is_pre_approved: true, // QR visitors are pre-approved
-                valid_until: null,
-                email: formData.get('email') || null,
-                company: formData.get('company') || null
+                valid_until: null
             };
 
-            // Save visitor to Firestore with specific ID
+            // Save visitor to Firestore with specific ID (same as Flutter)
             await db.collection('visitors').doc(visitorId).set(visitorData);
+            
+            // Mark QR invitation as used (same as guard scanner)
+            await this.useInvitation(this.currentInvitation.id);
             
             // Send notifications
             await this.sendNotifications(visitorData, visitorId);
@@ -288,11 +285,11 @@ class VisitorCheckInApp {
 
     async sendNotifications(visitorData, visitorId) {
         try {
-            // Create notification for guard - visitor logged successfully
+            // Send QR visitor notification to guard (same as Flutter app)
             const guardNotification = {
-                type: 'visitor_logged',
-                title: 'Visitor Logged Successfully',
-                message: `${visitorData.name} has been logged and checked in to visit ${visitorData.visiting_flat}`,
+                type: 'qr_visitor_approved',
+                title: 'QR Visitor Auto-Approved',
+                message: `${visitorData.name} has been auto-approved via QR code to visit ${visitorData.visiting_flat}`,
                 visitor_id: visitorId,
                 visitor_name: visitorData.name,
                 flat_no: visitorData.visiting_flat,
@@ -303,11 +300,11 @@ class VisitorCheckInApp {
                 target_role: 'guard'
             };
 
-            // Create notification for resident/host - visitor has arrived
+            // Send QR visitor notification to resident/host (same as Flutter app)
             const residentNotification = {
-                type: 'visitor_checked_in',
-                title: 'Visitor Checked In',
-                message: `${visitorData.name} has checked in and is on their way to visit you`,
+                type: 'qr_visitor_approved',
+                title: 'Your QR Visitor Has Arrived',
+                message: `${visitorData.name} has been automatically approved and is ready for entry`,
                 visitor_id: visitorId,
                 visitor_name: visitorData.name,
                 visitor_phone: visitorData.phone,
@@ -323,7 +320,7 @@ class VisitorCheckInApp {
                 db.collection('notifications').add(residentNotification)
             ]);
 
-            console.log('Notifications sent successfully');
+            console.log('QR visitor notifications sent successfully');
         } catch (error) {
             console.error('Error sending notifications:', error);
             // Don't throw error as registration was successful
@@ -345,13 +342,13 @@ class VisitorCheckInApp {
             <p><strong>Visiting:</strong> ${visitorData.visiting_flat}</p>
             <p><strong>Host:</strong> ${visitorData.host_name}</p>
             <p><strong>Time:</strong> ${this.formatDateTime(new Date())}</p>
-            <p><strong>Status:</strong> <span style="color: #1976D2; font-weight: bold;">Checked In</span></p>
+            <p><strong>Status:</strong> <span style="color: #1976D2; font-weight: bold;">Auto-Approved & Checked In</span></p>
             <p style="color: #1976D2; font-weight: bold; margin-top: 1rem;">
-                You have been successfully checked in! The guard and host have been notified.
+                Visitor logged successfully! You have been automatically approved and checked in.
             </p>
         `;
         this.showScreen('success-screen');
-        this.showToast('Visitor logged successfully! You are now checked in.', 'success');
+        this.showToast(`Visitor ${visitorData.name} logged successfully!`, 'success');
     }
 
     showError(message) {
